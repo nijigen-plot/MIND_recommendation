@@ -1,0 +1,11 @@
+[project]
+name = "20250202-microsoft-news-recommendation"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11.4"
+dependencies = [
+    "ipykernel>=6.29.5",
+    "jupyter>=1.1.1",
+    "pandas>=2.2.3",
+]
