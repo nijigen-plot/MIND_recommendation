@@ -12,6 +12,7 @@ from nltk.corpus import stopwords
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.tag import pos_tag
 from nltk.tokenize import word_tokenize
+from tqdm import tqdm
 
 from src.base_recommender import BaseRecommender
 from util.models import Dataset, RecommendResult
@@ -65,8 +66,8 @@ class LDAContentRecommender(BaseRecommender):
         # 文書 x コーパス数でコサイン類似度が出せる行列を作る
         index = MatrixSimilarity(lda_model[common_corpus])
         pred_categories = []
-        #
-        for vc in valid_corpus:
+        # 予測対象の文書1つ1つの代表カテゴリ予測結果を求める
+        for vc in tqdm(valid_corpus):
             topic_distribution = lda_model[vc]
             sims = index[topic_distribution]
             # similar_docs = sorted(enumerate(sims), key=lambda item: -item[1])[:10]
