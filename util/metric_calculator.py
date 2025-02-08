@@ -19,12 +19,16 @@ class MetricCalculator:
         return Metrics(accuracy, precision, recall)
 
     def _calc_accuracies(self, true_category: NDArray[np.str_], pred_category: NDArray[np.str_]) -> Tuple[np.float64, np.float64, np.float64]:
+        if len(true_category) != len(pred_category):
+            raise ValueError("True, Pred 配列の互いの長さが違います")
         df = pd.DataFrame({
             'True': true_category,
             'Pred': pred_category
         })
+        unique_categories = list(set(true_category) | set(pred_category))
         # True,PredでGroupbyしてUnstackで横持ちにする
         conf_matrix = df.groupby(['True', 'Pred']).size().unstack(fill_value=0)
+        conf_matrix = conf_matrix.reindex(index=unique_categories, columns=unique_categories, fill_value=0)
         all = conf_matrix.sum().sum()
         # TP, FN, FPの値は行や列ごとに精度をだして平均する感じになる
         # 対角線にあるのはTrue Positive
