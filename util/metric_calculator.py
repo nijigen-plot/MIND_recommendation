@@ -35,12 +35,12 @@ class MetricCalculator:
         fp_vector = conf_matrix.sum(axis=0) - tp_vector
 
         # %%
-        # 精度は全体分のTP
-        accuracy = tp_vector.sum() / all
-        # Precision,Recallについては行or列レベルで出した後に平均をとる
+        # Micro Metric
+        micro_accuracy = tp_vector.sum() / all
+        # Macro Metrics
         precision = np.where((tp_vector + fp_vector) != 0, tp_vector / (tp_vector + fp_vector), np.nan)
         recall = np.where((tp_vector + fn_vector) != 0, tp_vector / (tp_vector + fn_vector), np.nan)
-        avg_precision = np.nanmean(precision)
-        avg_recall = np.nanmean(recall)
+        macro_precision = np.nanmean(precision)
+        macro_recall = np.nanmean(recall)
 
-        return (accuracy, avg_precision, avg_recall)
+        return (micro_accuracy, macro_precision, macro_recall)

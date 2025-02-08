@@ -20,8 +20,8 @@ class RecommendResult:
 @dataclasses.dataclass(frozen=True)
 class Metrics:
     accuracy: np.float64
-    precision: np.float64
-    recall: np.float64
+    macro_precision: np.float64
+    macro_recall: np.float64
 
     def __repr__(self):
-        return f'Accuracy={self.accuracy:.3f}, Macro Precision={self.precision:.3f}, Macro Recall={self.recall:.3f}'
+        return f'Accuracy={self.accuracy:.3f}, Macro Precision={self.macro_precision:.3f}, Macro Recall={self.macro_recall:.3f}'
