@@ -10,7 +10,6 @@ import pandas as pd
 class Dataset:
     train: pd.DataFrame
     valid: pd.DataFrame
-    test:  pd.DataFrame
 
 # 予測結果を返す
 @dataclasses.dataclass(frozen=True)

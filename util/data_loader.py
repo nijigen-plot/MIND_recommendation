@@ -10,9 +10,12 @@ class DataLoader:
     def __init__(self, data_path: str='../data'):
         self.data_path = data_path
 
-    def load(self) -> Dataset:
-        train_df, valid_df, test_df = self._load()
-        return Dataset(train_df, valid_df, test_df)
+    def load(self, volume = 'large') -> Dataset:
+        if volume in ('small','large'):
+            train_df, valid_df = self._load(volume)
+            return Dataset(train_df, valid_df)
+        else:
+            raise ValueError("volume argument must be either 'small' or 'large'")
 
     def _transform(self, full_data_path : str) -> pd.DataFrame:
         news_columns = [
@@ -33,9 +36,8 @@ class DataLoader:
         df['abstract'] = df['abstract'].str.lower()
         return df[['news_id', 'category', 'title', 'abstract']]
 
-    def _load(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-        train_df = self._transform(full_data_path=f'{self.data_path}/MINDlarge_train/news.tsv')
-        valid_df = self._transform(full_data_path=f'{self.data_path}/MINDlarge_dev/news.tsv')
-        test_df = self._transform(full_data_path=f'{self.data_path}/MINDlarge_test/news.tsv')
+    def _load(self, volume : str) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        train_df = self._transform(full_data_path=f'{self.data_path}/MIND{volume}_train/news.tsv')
+        valid_df = self._transform(full_data_path=f'{self.data_path}/MIND{volume}_dev/news.tsv')
 
-        return train_df, valid_df, test_df
+        return train_df, valid_df
