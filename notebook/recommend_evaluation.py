@@ -41,8 +41,15 @@ print(lda_metrics)
 w2v_recommender = Word2VecContentRecommender()
 w2v_result = w2v_recommender.recommend(mind, model_load_dir="../models")
 # %%
+w2v_train_vector = w2v_result.train_content_vector
+w2v_valid_vector = w2v_result.valid_content_vector
+np.save('../data/w2v_train_vector.np', w2v_train_vector)
+np.save('../data/w2v_valid_vector.np', w2v_valid_vector)
+# %%
 w2v_metrics = metric_calculator.calc(
     np.array(mind.valid.category.tolist()),
     np.array(w2v_result.recommend_result)
 )
 print(w2v_metrics)
+# %%
+mind.valid

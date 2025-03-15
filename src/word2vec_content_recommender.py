@@ -94,7 +94,7 @@ class Word2VecContentRecommender(BaseRecommender):
             max_category = max(category_scores, key=category_scores.get)
             pred_categories.append(max_category)
 
-        return RecommendResult(list(pred_categories))
+        return RecommendResult(list(pred_categories), title_abstract_vectors, valid_title_abstract_vectors)
 
     # 学習したモデルから文書ごとに出現単語ベクトルを平均して文書ユニークなベクトルを作る
     def _generate_vector(self, title_abstract_data : List, title_abstract_in_model : set, w2v_model : gensim.models.word2vec.Word2Vec) -> np.array:

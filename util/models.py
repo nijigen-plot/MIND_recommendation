@@ -15,6 +15,8 @@ class Dataset:
 @dataclasses.dataclass(frozen=True)
 class RecommendResult:
     recommend_result : List[str]
+    train_content_vector : np.array
+    valid_content_vector : np.array
 
 # 予測結果と真のデータをもとに評価値を返してくれるやつ
 @dataclasses.dataclass(frozen=True)
