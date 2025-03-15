@@ -12,9 +12,13 @@ wheels/
 # Content File
 *.tsv
 *.vec
+*.npy
 
 # Zone Identifier
 *.Identifier
 
 # Model
 models/*
+
+# env
+.env
