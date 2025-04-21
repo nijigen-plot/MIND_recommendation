@@ -57,6 +57,7 @@ class OpenSearchManager:
         loader = DataLoader()
         mind = loader.load('small')
         self.train_df = mind.train
+        self.valid_df = mind.valid
         # ベクトルファイル
         self.w2v_train = np.load(os.path.join(ROOT, 'data', 'w2v_train_vector.np.npy'), allow_pickle=False)
         self.w2v_valid = np.load(os.path.join(ROOT, 'data', 'w2v_valid_vector.np.npy'), allow_pickle=False)
@@ -109,91 +110,82 @@ class OpenSearchManager:
     def create_index(self) -> None:
         try:
             resp = self.client.indices.create(self.index_name, body=self.index_body, ignore=400)
+            if resp.get('error'):
+                logging.error(f"インデックス作成エラー: {resp['error']}")
+                sys.exit(1)
             logging.info(f"インデックス作成レスポンス: {resp}")
-        except OpenSearchException:
-            logging.exception("インデックス作成に失敗")
-
-    def index_single(self, doc_id: str = "1") -> None:
-        if self.train_df.empty or self.w2v_train.shape[0] < 1:
-            logging.warning("データ不足のため単一投入スキップ")
-            return
-        doc = {
-            "news_id": self.train_df.iloc[0]['news_id'],
-            "category": self.train_df.iloc[0]['category'],
-            "title_abstract": self.w2v_train[0].tolist()
-        }
-        try:
-            resp = self.client.index(index=self.index_name, body=doc, id=doc_id, refresh=True)
-            logging.info(f"単一投入({doc_id})レスポンス: {resp}")
-        except OpenSearchException:
-            logging.exception("単一ドキュメント投入に失敗")
+        except Exception as e:
+            logging.exception(f"インデックス作成に失敗: {e}")
+            sys.exit(1)
 
     def bulk(self, batch_size: int = 1000) -> None:
         data: List[Dict[str, Any]] = []
-        for i, row in self.train_df.iterrows():
-            data.append({"index": {"_index": self.index_name, "_id": str(i)}})
+        for i in tqdm(range(len(self.train_df))):
+            data.append({"index": {"_index": self.index_name, "_id": i}})
             data.append({
-                "news_id": row['news_id'],
-                "category": row['category'],
-                "title_abstract": self.w2v_train[i].tolist()
+                "news_id": self.train_df.iloc[i, :]['news_id'],
+                "category": self.train_df.iloc[i, :]['category'],
+                "title_abstract": self.w2v_train[i]
             })
-        total = len(data) // 2
-        for i in range(0, len(data), batch_size * 2):
-            batch = data[i:i + batch_size * 2]
+        # 一気に５万件はきづいのて1000件ずつ送る。dataはindexとデータの2つあるから実際のデータ量x2が送られる
+        for i in range(0, len(data), batch_size):
+            batch = data[i:i + batch_size]
             try:
                 resp = self.client.bulk(batch, refresh=True)
                 if resp.get('errors'):
                     logging.error(f"バルクエラー: {resp}")
                 else:
-                    logging.info(f"バルク投入 {min(i//2 + batch_size, total)} / {total}")
+                    logging.info(f"バルク投入 {i + batch_size}")
             except OpenSearchException:
                 logging.exception("バルク投入に失敗")
 
-    def knn(self, k: int = 10) -> None:
-        if self.w2v_valid.shape[0] <= 5000:
-            logging.warning("検証データ不足のためKNN検索スキップ")
-            return
-        vec = self.w2v_valid[5000].tolist()
+    def knn(self, k: int, valid_index_number : int) -> None:
+        search_target_vector = self.w2v_valid[valid_index_number]
         query = {
             "size": k,
             "query": {
                 "knn": {
-                    "title_abstract": {"vector": vec, "k": k}
+                    "title_abstract": {
+                        "vector": search_target_vector,
+                        "k": k
+                    }
                 }
             }
         }
         try:
             resp = self.client.search(body=query, index=self.index_name)
+            if resp.get('error'):
+                logging.error(f"KNN検索エラー: {resp['error']}")
+                sys.exit(1)
             logging.info("KNN検索結果:")
-            print(json.dumps(resp, indent=2, ensure_ascii=False))
-        except OpenSearchException:
-            logging.exception("KNN検索に失敗")
+            logging.info(json.dumps(resp, indent=2, ensure_ascii=False))
+        except Exception as e:
+            logging.exception(f"KNN検索に失敗 : {e}")
+            sys.exit(1)
 
-    def run(self, action: str, doc_id: str, batch_size: int, knn_k: int) -> None:
-        if action in ('info', 'all'):
+    def run(self, action: str, batch_size: int, knn_k: int, search_index: int) -> None:
+        if action in ('info'):
             self.info()
-        if action in ('create_index', 'all'):
+        if action in ('create_index'):
             self.create_index()
-        if action in ('single', 'all'):
-            self.index_single(doc_id)
-        if action in ('bulk', 'all'):
+        if action in ('bulk'):
             self.bulk(batch_size)
-        if action in ('knn', 'all'):
-            self.knn(knn_k)
+        if action in ('knn'):
+            self.knn(knn_k, search_index)
 
 def main():
     parser = argparse.ArgumentParser(description="OpenSearch 操作スクリプト")
     parser.add_argument('-a', '--action',
-                        choices=['info', 'create_index', 'single', 'bulk', 'knn', 'all'],
+                        choices=['info', 'create_index', 'bulk', 'knn'],
                         required=True,
                         help="実行するアクションを指定")
-    parser.add_argument('--doc-id', default="1", help="単一投入時のドキュメントID")
     parser.add_argument('--batch-size', type=int, default=1000, help="バルク投入時のバッチサイズ")
     parser.add_argument('--knn-k', type=int, default=10, help="KNN検索時のk値")
+    parser.add_argument('--search-index', type=int, default=0, help="KNN検索対象となるインデックス番号")
     args = parser.parse_args()
 
     manager = OpenSearchManager()
-    manager.run(args.action, args.doc_id, args.batch_size, args.knn_k)
+    manager.run(args.action, args.batch_size, args.knn_k, args.search_index)
 
 if __name__ == '__main__':
     main()
