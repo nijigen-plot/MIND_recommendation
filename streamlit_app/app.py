@@ -39,8 +39,8 @@ def run_knn_cli(cli_path: str, k: int, idx: int):
 def main():
     st.title("MIND Word2Vecによるコンテンツベクトル近傍検索デモ")
     manager = get_manager()
-    n = st.slider("近傍検索するドキュメントを選択してください(見切れる場合は対象セルをダブルクリックで全文見れます。)", min_value=0, max_value=len(manager.valid_df)-1, value=0)
-    st.dataframe(manager.valid_df.iloc[n, :])
+    n = st.slider("近傍検索するドキュメントを選択してください(見切れる場合は対象セルをダブルクリックで全文見れます。)", min_value=0, max_value=len(manager.valid_df_only_exists)-1, value=0)
+    st.dataframe(manager.valid_df_only_exists.iloc[n, :])
 
     if st.button("検索開始!"):
         result = manager.knn(k=10, valid_index_number=n)
@@ -48,9 +48,12 @@ def main():
         hits = result["hits"]["hits"]
         for i, doc in enumerate(hits, 1):
             source = doc["_source"]
+            match_index = (manager.valid_df_only_exists['news_id'] == source.get('news_id')).idxmax()
             st.markdown(f"- **カテゴリ**: `{source.get('category', 'N/A')}`")
             st.markdown(f"- **ニュースID**: `{source.get('news_id', 'N/A')}`")
             st.markdown(f"- **スコア**: `{doc.get('_score', 0):.4f}`")
+            st.markdown(f"- **タイトル**: `{manager.valid_df_only_exists.loc[match_index, 'title']}`")
+            st.markdown(f"- **要約**: `{manager.valid_df_only_exists.loc[match_index, 'abstract']}`")
             st.markdown("---")
 
 if __name__ == "__main__":
