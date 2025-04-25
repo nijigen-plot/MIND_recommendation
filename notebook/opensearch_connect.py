@@ -36,24 +36,10 @@ logging.basicConfig(
 )
 
 class OpenSearchManager:
-    def __init__(self):
+    def __init__(self, strategy: str):
         self.config = self.load_config()
         self.client = self.get_client()
-        self.index_name = 'mind-recommend'
-        self.index_body = {
-            "settings": {
-                "index": {"knn": True, "number_of_shards": 2}
-            },
-            "mappings": {
-                "properties": {
-                    "title_abstract": {
-                        "type": "knn_vector",
-                        "dimension": 100,
-                        "method": {"name": "hnsw"}
-                    }
-                }
-            }
-        }
+
         loader = DataLoader()
         mind = loader.load('small')
         self.train_df = mind.train.reset_index(drop=True)
@@ -61,11 +47,55 @@ class OpenSearchManager:
         # ベクトルファイル
         self.w2v_train = np.load(os.path.join(ROOT, 'data', 'w2v_train_vector.np.npy'), allow_pickle=False)
         self.w2v_valid = np.load(os.path.join(ROOT, 'data', 'w2v_valid_vector.np.npy'), allow_pickle=False)
+        self.lda_train = np.load(os.path.join(ROOT, 'data', 'lda_train_vector.np.npy'), allow_pickle=False)
+        self.lda_valid = np.load(os.path.join(ROOT, 'data', 'lda_valid_vector.np.npy'), allow_pickle=False)
         # train,valid互いに入っているNewsがあるので除外する
         self.train_news = self.train_df['news_id'].unique()
         self.valid_only_exists_news_indies = self.valid_df[~self.valid_df['news_id'].isin(self.train_news)].index.tolist()
         self.valid_df_only_exists = self.valid_df[self.valid_df.index.isin(self.valid_only_exists_news_indies)].reset_index(drop=True)
         self.w2v_valid_only_exists = self.w2v_valid[self.valid_only_exists_news_indies, :]
+        self.lda_valid_only_exists = self.lda_valid[self.valid_only_exists_news_indies, :]
+
+        # ベクトル戦略に応じて使用するベクトルを設定
+        if strategy not in ('word2vec', 'lda'):
+            raise ValueError(f"unknown strategy: {strategy}")
+        self.strategy = strategy
+        if self.strategy == 'word2vec':
+            self.train_vectors = self.w2v_train
+            self.valid_vectors = self.w2v_valid_only_exists
+            self.index_name = 'mind-recommend'
+            self.index_body = {
+                "settings": {
+                    "index": {"knn": True, "number_of_shards": 2}
+                },
+                "mappings": {
+                    "properties": {
+                        "title_abstract": {
+                            "type": "knn_vector",
+                            "dimension": 100,
+                            "method": {"name": "hnsw"}
+                        }
+                    }
+                }
+            }
+        else:
+            self.train_vectors = self.lda_train
+            self.valid_vectors = self.lda_valid_only_exists
+            self.index_name = 'mind-recommend-lda'
+            self.index_body = {
+                "settings": {
+                    "index": {"knn": True, "number_of_shards": 2}
+                },
+                "mappings": {
+                    "properties": {
+                        "title_abstract": {
+                            "type": "knn_vector",
+                            "dimension": 50,
+                            "method": {"name": "hnsw"}
+                        }
+                    }
+                }
+            }
 
 
     @staticmethod
@@ -131,7 +161,7 @@ class OpenSearchManager:
             data.append({
                 "news_id": self.train_df.iloc[i, :]['news_id'],
                 "category": self.train_df.iloc[i, :]['category'],
-                "title_abstract": self.w2v_train[i]
+                "title_abstract": self.train_vectors[i]
             })
         # 一気に５万件はきづいのて1000件ずつ送る。dataはindexとデータの2つあるから実際のデータ量x2が送られる
         for i in range(0, len(data), batch_size):
@@ -146,7 +176,7 @@ class OpenSearchManager:
                 logging.exception("バルク投入に失敗")
 
     def knn(self, k: int, valid_index_number : int) -> Dict[str, Any]:
-        search_target_vector = self.w2v_valid_only_exists[valid_index_number]
+        search_target_vector = self.valid_vectors[valid_index_number]
         query = {
             "size": k,
             "query": {
@@ -189,9 +219,10 @@ def main():
     parser.add_argument('--batch-size', type=int, default=1000, help="バルク投入時のバッチサイズ")
     parser.add_argument('--knn-k', type=int, default=10, help="KNN検索時のk値")
     parser.add_argument('--search-index', type=int, default=0, help="KNN検索対象となるインデックス番号")
+    parser.add_argument('--strategy', choices=['word2vec', 'lda'], required=True, help="使用するベクトル戦略を指定")
     args = parser.parse_args()
 
-    manager = OpenSearchManager()
+    manager = OpenSearchManager(args.strategy)
     manager.run(args.action, args.batch_size, args.knn_k, args.search_index)
 
 if __name__ == '__main__':
