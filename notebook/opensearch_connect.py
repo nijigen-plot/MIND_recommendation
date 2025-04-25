@@ -139,7 +139,7 @@ class OpenSearchManager:
             except OpenSearchException:
                 logging.exception("バルク投入に失敗")
 
-    def knn(self, k: int, valid_index_number : int) -> None:
+    def knn(self, k: int, valid_index_number : int) -> Dict[str, Any]:
         search_target_vector = self.w2v_valid[valid_index_number]
         query = {
             "size": k,
@@ -159,6 +159,7 @@ class OpenSearchManager:
                 sys.exit(1)
             logging.info("KNN検索結果:")
             logging.info(json.dumps(resp, indent=2, ensure_ascii=False))
+            return resp
         except Exception as e:
             logging.exception(f"KNN検索に失敗 : {e}")
             sys.exit(1)
