@@ -61,6 +61,12 @@ class OpenSearchManager:
         # ベクトルファイル
         self.w2v_train = np.load(os.path.join(ROOT, 'data', 'w2v_train_vector.np.npy'), allow_pickle=False)
         self.w2v_valid = np.load(os.path.join(ROOT, 'data', 'w2v_valid_vector.np.npy'), allow_pickle=False)
+        # train,valid互いに入っているNewsがあるので除外する
+        self.train_news = self.train_df['news_id'].unique()
+        self.valid_only_exists_news_indies = self.valid_df[~self.valid_df['news_id'].isin(self.train_news)].index.tolist()
+        self.valid_df_only_exists = self.valid_df[self.valid_df.index.isin(self.valid_only_exists_news_indies)].reset_index(drop=True)
+        self.w2v_valid_only_exists = self.w2v_valid[self.valid_only_exists_news_indies, :]
+
 
     @staticmethod
     def load_config() -> Dict[str, str]:
@@ -140,7 +146,7 @@ class OpenSearchManager:
                 logging.exception("バルク投入に失敗")
 
     def knn(self, k: int, valid_index_number : int) -> Dict[str, Any]:
-        search_target_vector = self.w2v_valid[valid_index_number]
+        search_target_vector = self.w2v_valid_only_exists[valid_index_number]
         query = {
             "size": k,
             "query": {
