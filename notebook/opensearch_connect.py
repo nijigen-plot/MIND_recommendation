@@ -56,8 +56,8 @@ class OpenSearchManager:
         }
         loader = DataLoader()
         mind = loader.load('small')
-        self.train_df = mind.train
-        self.valid_df = mind.valid
+        self.train_df = mind.train.reset_index(drop=True)
+        self.valid_df = mind.valid.reset_index(drop=True)
         # ベクトルファイル
         self.w2v_train = np.load(os.path.join(ROOT, 'data', 'w2v_train_vector.np.npy'), allow_pickle=False)
         self.w2v_valid = np.load(os.path.join(ROOT, 'data', 'w2v_valid_vector.np.npy'), allow_pickle=False)
