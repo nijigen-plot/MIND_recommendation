@@ -15,15 +15,11 @@ import numpy as np
 import streamlit as st
 from opensearch_connect import OpenSearchManager
 
-from util.data_loader import DataLoader
-
-# %%
-OSM = OpenSearchManager()
 
 # %%
 @st.cache_resource()
 def get_manager():
-    return OpenSearchManager()
+    return OpenSearchManager(strategy='word2vec'), OpenSearchManager(strategy='lda')
 
 def run_knn_cli(cli_path: str, k: int, idx: int):
     cmd = [
@@ -37,24 +33,41 @@ def run_knn_cli(cli_path: str, k: int, idx: int):
     return data["hits"]["hits"]
 
 def main():
-    st.title("MIND Word2Vecによるコンテンツベクトル近傍検索デモ")
-    manager = get_manager()
-    n = st.slider("近傍検索するドキュメントを選択してください(見切れる場合は対象セルをダブルクリックで全文見れます。)", min_value=0, max_value=len(manager.valid_df_only_exists)-1, value=0)
-    st.dataframe(manager.valid_df_only_exists.iloc[n, :])
+    st.title("MIND Word2Vec & LDAによるコンテンツベクトル近傍検索デモ")
+    w2v_manager, lda_manager = get_manager()
+    n = st.slider("近傍検索するドキュメントを選択してください(見切れる場合は対象セルをダブルクリックで全文見れます。)", min_value=0, max_value=len(w2v_manager.valid_df_only_exists)-1, value=0)
+    st.dataframe(w2v_manager.valid_df_only_exists.iloc[n, :])
 
     if st.button("検索開始!"):
-        result = manager.knn(k=10, valid_index_number=n)
-        st.markdown("### 検索結果")
-        hits = result["hits"]["hits"]
-        for i, doc in enumerate(hits, 1):
-            source = doc["_source"]
-            match_index = (manager.valid_df_only_exists['news_id'] == source.get('news_id')).idxmax()
-            st.markdown(f"- **カテゴリ**: `{source.get('category', 'N/A')}`")
-            st.markdown(f"- **ニュースID**: `{source.get('news_id', 'N/A')}`")
-            st.markdown(f"- **スコア**: `{doc.get('_score', 0):.4f}`")
-            st.markdown(f"- **タイトル**: `{manager.valid_df_only_exists.loc[match_index, 'title']}`")
-            st.markdown(f"- **要約**: `{manager.valid_df_only_exists.loc[match_index, 'abstract']}`")
-            st.markdown("---")
+        w2v_result = w2v_manager.knn(k=10, valid_index_number=n)
+        lda_result = lda_manager.knn(k=10, valid_index_number=n)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("### Word2Vec 検索結果")
+            hits = w2v_result["hits"]["hits"]
+            for i, doc in enumerate(hits, 1):
+                source = doc["_source"]
+                match_index = (w2v_manager.valid_df_only_exists['news_id'] == source.get('news_id')).idxmax()
+                st.markdown(f"- **カテゴリ**: `{source.get('category', 'N/A')}`")
+                st.markdown(f"- **ニュースID**: `{source.get('news_id', 'N/A')}`")
+                st.markdown(f"- **スコア**: `{doc.get('_score', 0):.4f}`")
+                st.markdown(f"- **タイトル**: `{w2v_manager.valid_df_only_exists.loc[match_index, 'title']}`")
+                st.markdown(f"- **要約**: `{w2v_manager.valid_df_only_exists.loc[match_index, 'abstract']}`")
+                st.markdown("---")
+
+        with col2:
+            st.markdown("### LDA 検索結果")
+            hits = lda_result["hits"]["hits"]
+            for i, doc in enumerate(hits, 1):
+                source = doc["_source"]
+                match_index = (lda_manager.valid_df_only_exists['news_id'] == source.get('news_id')).idxmax()
+                st.markdown(f"- **カテゴリ**: `{source.get('category', 'N/A')}`")
+                st.markdown(f"- **ニュースID**: `{source.get('news_id', 'N/A')}`")
+                st.markdown(f"- **スコア**: `{doc.get('_score', 0):.4f}`")
+                st.markdown(f"- **タイトル**: `{lda_manager.valid_df_only_exists.loc[match_index, 'title']}`")
+                st.markdown(f"- **要約**: `{lda_manager.valid_df_only_exists.loc[match_index, 'abstract']}`")
+                st.markdown("---")
+
 
 if __name__ == "__main__":
     main()
