@@ -34,7 +34,7 @@ def run_knn_cli(cli_path: str, k: int, idx: int):
 
 def main():
     st.title("MIND Word2Vec & LDAによるコンテンツベクトル近傍検索デモ")
-    st.markdown("[MIND(Microsoft News Dataset)](https://msnews.github.io/) smallのTraining,Validation Setを活用し [Word2Vec](https://arxiv.org/pdf/1310.4546),[LDA(Latent Dirichlet Allocation)](https://www.jmlr.org/papers/volume3/blei03a/blei03a.pdf)の予測結果比較を行えます。")
+    st.markdown("[MIND(Microsoft News Dataset)](https://msnews.github.io/) smallのTraining,Validation Setを活用した [Word2Vec](https://arxiv.org/pdf/1310.4546),[LDA(Latent Dirichlet Allocation)](https://www.jmlr.org/papers/volume3/blei03a/blei03a.pdf)の予測結果比較を行えます。")
     w2v_manager, lda_manager = get_manager()
     n = st.slider("近傍検索するドキュメントを選択してください", min_value=0, max_value=len(w2v_manager.valid_df_only_exists)-1, value=0)
     st.dataframe(w2v_manager.valid_df_only_exists.iloc[n, :])
