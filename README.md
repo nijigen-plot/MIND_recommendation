@@ -10,5 +10,5 @@ OpenSearch Dashboardは192.168.0.45:5601から基本見れます
 
 # フロント
 
-Streamlitで作ってます。`cd ./streamlit_app`して`uv run streamlit run app.py`
+Streamlitで作ってます。`cd ./streamlit_app`して`uv run streamlit run app.py --server.port 8501`
 cdしないとDataLoaderクラスのinitがdirの関係で失敗します
