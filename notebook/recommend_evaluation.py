@@ -37,6 +37,11 @@ lda_metrics = metric_calculator.calc(
 )
 print(lda_metrics)
 # %%
+lda_train_vector = lda_result.train_content_vector
+lda_valid_vector = lda_result.valid_content_vector
+np.save('../data/lda_train_vector.np', lda_train_vector)
+np.save('../data/lda_valid_vector.np', lda_valid_vector)
+# %%
 # word2vecによる評価
 w2v_recommender = Word2VecContentRecommender()
 w2v_result = w2v_recommender.recommend(mind, model_load_dir="../models")

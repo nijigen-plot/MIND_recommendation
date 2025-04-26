@@ -82,8 +82,23 @@ class LDAContentRecommender(BaseRecommender):
             max_category = max(category_scores, key=category_scores.get)
             pred_categories.append(max_category)
 
-        return RecommendResult(list(pred_categories))
+        # train,validのベクトルを作成
+        train_vectors = [
+            self._sparse_to_dense(lda_model[doc_bow], factors)
+            for doc_bow in common_corpus
+        ]
+        valid_vectors = [
+            self._sparse_to_dense(lda_model[doc_bow], factors)
+            for doc_bow in valid_corpus
+        ]
 
+        return RecommendResult(list(pred_categories), np.array(train_vectors), np.array(valid_vectors))
+
+    def _sparse_to_dense(self, topic_dist, num_topics):
+        vec = [0.0] * num_topics
+        for topic_id, prob in topic_dist:
+            vec[topic_id] = prob
+        return vec
 
     def _lemmatize_sentence(self, sentence : str) -> List:
         lemmatizer = WordNetLemmatizer()
